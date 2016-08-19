@@ -955,6 +955,8 @@ run(void) {
 			continue;
 		switch(ev.type) {
 		case MotionNotify:
+			while(XCheckTypedEvent(dc->dpy, MotionNotify, &ev))
+			      (void)0;
 			pointermove(&ev);
 			break;
 		case ButtonPress:
