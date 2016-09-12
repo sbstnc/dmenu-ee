@@ -616,6 +616,8 @@ strchri(const char *s, int c) {
 		l = strchr(s, c);
 		u = strchr(s, toupper(c));
 	}
+
+  return u == NULL? l : u;
 }
 
 void
