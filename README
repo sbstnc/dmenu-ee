@@ -1,6 +1,6 @@
 dmenu-ee // dynamic menu extended edition
 ==============================
-dmenu-ee is a fork of dmenu - an efficient dynamic menu for X, patched with XFT, quiet, x & y, token, fuzzy matching, follow focus, tab nav, filter and full mouse support.
+dmenu-ee is a fork of dmenu - an efficient dynamic menu for X, patched with XFT, quiet, x & y, token, fuzzy matching, borders, follow focus, tab nav, filter and full mouse support.
 Added an option to set the screen on which dmenu appears.
 Also allows to dim screen with selected color and opacity while dmenu-ee is running.
 

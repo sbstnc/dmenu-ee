@@ -172,8 +172,8 @@ initfont(DC *dc, const char *fontstr) {
 }
 
 void
-mapdc(DC *dc, Window win, unsigned int w, unsigned int h) {
-	XCopyArea(dc->dpy, dc->canvas, win, dc->gc, 0, 0, w, h, 0, 0);
+mapdc(DC *dc, Window win, unsigned int w, unsigned int h, int offset) {
+	XCopyArea(dc->dpy, dc->canvas, win, dc->gc, 0, 0, w, h, offset, offset);
 }
 
 void

@@ -60,10 +60,12 @@ static const char *normbgcolor = NULL;
 static const char *normfgcolor = NULL;
 static const char *selbgcolor  = NULL;
 static const char *selfgcolor  = NULL;
-static const char *dimcolor = NULL; 
+static const char *dimcolor = NULL;
+static const char *bordercolor  = NULL;
 static char *name = "dmenu";
 static char *class = "Dmenu";
 static char *dimname = "dimenu";
+static unsigned int border_width = 0;
 static unsigned int lines = 0, line_height = 0;
 static int xoffset = 0;
 static int yoffset = 0;
@@ -74,6 +76,7 @@ static int snum = -1;
 static ColorSet *normcol;
 static ColorSet *selcol;
 static ColorSet *dimcol;
+static ColorSet *bordercol;
 static Atom clip, utf8;
 static Bool topbar = True;
 static Bool running = True;
@@ -155,7 +158,7 @@ main(int argc, char *argv[]) {
 		else if (!strcmp(argv[i], "-o"))  /* opacity */
 			opacity = atof(argv[++i]);
 		else if (!strcmp(argv[i], "-dim"))  /* dim opacity */
-			dimopacity = atof(argv[++i]);	
+			dimopacity = atof(argv[++i]);
 		else if (!strcmp(argv[i], "-dc")) /* dim color */
 			dimcolor = argv[++i];
 		else if(!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
@@ -170,6 +173,10 @@ main(int argc, char *argv[]) {
 			selbgcolor = argv[++i];
 		else if(!strcmp(argv[i], "-sf"))  /* selected foreground color */
 			selfgcolor = argv[++i];
+		else if(!strcmp(argv[i], "-bw"))  /* border width */
+			border_width = atoi(argv[++i]);
+		else if(!strcmp(argv[i], "-bc"))  /* selected border color */
+			bordercolor = argv[++i];
 		else
 			usage();
 
@@ -179,6 +186,7 @@ main(int argc, char *argv[]) {
 	normcol = initcolor(dc, normfgcolor, normbgcolor);
 	selcol = initcolor(dc, selfgcolor, selbgcolor);
 	dimcol = initcolor(dc, dimcolor, dimcolor);
+	bordercol = initcolor(dc, bordercolor, bordercolor);
 
    if(noinput) {
       grabkeyboard();
@@ -224,6 +232,8 @@ read_resourses(void) {
 			selfgcolor = strdup(xvalue.addr);
 		if( selbgcolor == NULL && XrmGetResource(xdb, "dmenu.selbackground", "*", datatype, &xvalue) == True )
 			selbgcolor = strdup(xvalue.addr);
+		if( bordercolor == NULL && XrmGetResource(xdb, "dmenu.bordercolor", "*", datatype, &xvalue) == True )
+			bordercolor = strdup(xvalue.addr);
 		if( dimcolor == NULL && XrmGetResource(xdb, "dmenu.dimcolor", "*", datatype, &xvalue) == True )
 			dimcolor = strdup(xvalue.addr);
 		if( XrmGetResource(xdb, "dmenu.opacity", "*", datatype, &xvalue) == True )
@@ -239,6 +249,8 @@ read_resourses(void) {
 		selbgcolor  = "#005577";
 	if( selfgcolor == NULL )
 		selfgcolor  = "#eeeeee";
+	if( bordercolor == NULL )
+		bordercolor  = "#222222";
 	if( dimcolor == NULL )
 		dimcolor = "#000000";
 	if( !opacity )
@@ -335,7 +347,7 @@ drawmenu(void) {
 	if((curpos = textnw(dc, maskin ? maskinput : text, length) + dc->font.height/2) < dc->w)
 		drawrect(dc, curpos, (dc->h - dc->font.height)/2 + 1, 1, dc->font.height -1, True, normcol->FG);
 
-    if(!quiet || strlen(text) > 0) {    
+    if(!quiet || strlen(text) > 0) {
         if(lines > 0) {
             /* draw vertical list */
             dc->w = mw - dc->x;
@@ -361,7 +373,7 @@ drawmenu(void) {
                 drawtext(dc, ">", normcol);
         }
     }
-	mapdc(dc, win, mw, mh);
+	mapdc(dc, win, mw, mh, border_width);
 }
 
 void
@@ -598,7 +610,7 @@ keypress(XKeyEvent *ev) {
 				cursor = strlen(text);
 				match();
 			}
-		} 
+		}
 		break;
 	}
 	drawmenu();
@@ -686,7 +698,7 @@ void
 buttonpress(XEvent *e) {
 	int curpos;
 	Item *item;
-	XButtonPressedEvent *ev = &e->xbutton;	
+	XButtonPressedEvent *ev = &e->xbutton;
 
 	if(ev->window != win)
 		exit(EXIT_FAILURE);
@@ -872,7 +884,7 @@ matchfuzzy(void) {
 	size_t len;
 	Item *item;
 	char *pos;
-	
+
 	len = strlen(text);
 	matches = matchend = NULL;
 	for(item = items; item && item->text; item++) {
@@ -966,7 +978,7 @@ run(void) {
 			break;
 		case Expose:
 			if(ev.xexpose.count == 0)
-				mapdc(dc, win, mw, mh);
+				mapdc(dc, win, mw, mh, border_width);
 			break;
 		case KeyPress:
 			keypress(&ev.xkey);
@@ -1015,7 +1027,7 @@ setup(void) {
 			x = info[snum].x_org;
 			y = info[snum].y_org + (topbar ? yoffset : info[i].height - mh - yoffset);
 			mw = info[snum].width;
-			
+
 			dimx = info[snum].x_org;
 			dimy = info[snum].y_org;
 			dimw = info[snum].width;
@@ -1060,10 +1072,10 @@ setup(void) {
 		x = 0;
 		y = topbar ? 0 : DisplayHeight(dc->dpy, screen) - mh - yoffset;
 		mw = DisplayWidth(dc->dpy, screen);
-		
+
 		dimx = 0;
 		dimy = 0;
-		dimw = WidthOfScreen(defScreen); 
+		dimw = WidthOfScreen(defScreen);
 		dimh = HeightOfScreen(defScreen);
 	}
 
@@ -1072,9 +1084,9 @@ setup(void) {
 	promptw = (prompt && *prompt) ? textw(dc, prompt) : 0;
 	inputw = MIN(inputw, mw/3);
 	match();
-	
+
 	swa.override_redirect = True;
-	
+
 	/* create dim window */
 	if(dimopacity > 0) {
 		swa.background_pixel = dimcol->BG;
@@ -1085,20 +1097,20 @@ setup(void) {
 	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
 		XClassHint dimhint = { .res_name = dimname, .res_class = class };
   	XSetClassHint(dc->dpy, dim, &dimhint);
-  
+
 		dimopacity = MIN(MAX(dimopacity, 0), 1);
   	unsigned int dimopacity_set = (unsigned int)(dimopacity * OPAQUE);
   	XChangeProperty(dc->dpy, dim, XInternAtom(dc->dpy, OPACITY, False),
 											XA_CARDINAL, 32, PropModeReplace,
 											(unsigned char *) &dimopacity_set, 1L);
-	
+
 		XMapRaised(dc->dpy, dim);
 	}
-	
+
 	/* create menu window */
-	swa.background_pixel = normcol->BG;
+	swa.background_pixel = border_width ? bordercol->BG : normcol->BG;
 	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask | ButtonPressMask | PointerMotionMask;
-	win = XCreateWindow(dc->dpy, root, x, y, mw, mh, 0,
+	win = XCreateWindow(dc->dpy, root, x, y, mw + border_width * 2, mh + border_width * 2, 0,
 	                    DefaultDepth(dc->dpy, screen), CopyFromParent,
 	                    DefaultVisual(dc->dpy, screen),
 	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
@@ -1110,7 +1122,7 @@ setup(void) {
   XChangeProperty(dc->dpy, win, XInternAtom(dc->dpy, OPACITY, False),
 											XA_CARDINAL, 32, PropModeReplace,
 											(unsigned char *) &opacity_set, 1L);
-	
+
 	/* open input methods */
 	xim = XOpenIM(dc->dpy, NULL, NULL, NULL);
 	xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
@@ -1126,7 +1138,7 @@ usage(void) {
 	fputs("usage: dmenu [-b] [-q] [-f] [-r] [-i] [-z] [-t] [-mask] [-noinput]\n"
 				"             [-s screen] [-name name] [-class class] [ -o opacity]\n"
 				"             [-dim opcity] [-dc color] [-l lines] [-p prompt] [-fn font]\n"
-	      "             [-x xoffset] [-y yoffset] [-h height] [-w width]\n"
-	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-v]\n", stderr);
+	      "             [-x xoffset] [-y yoffset] [-h height] [-w width] [-bw pixels] \n"
+	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-bc color] [-v]\n", stderr);
 	exit(EXIT_FAILURE);
 }
